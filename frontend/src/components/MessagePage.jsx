@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { batch, useDispatch, useSelector } from "react-redux";
 import {
   setUsers,
   setActiveChat,
@@ -27,22 +27,22 @@ import {
 } from "lucide-react";
 import { io } from "socket.io-client";
 import { useRef } from "react";
+import { useState } from "react";
 
 export default function MessagePage() {
   const dispatch = useDispatch();
-  const {
-    users,
-    messages,
-    activeChat,
-    usersUnreadMsgCount,
-    userTyping,
-  } = useSelector((state) => state.chat);
+  const { users, messages, activeChat, usersUnreadMsgCount, userTyping } =
+    useSelector((state) => state.chat);
 
   const [messageInput, setMessageInput] = React.useState("");
   const socketRef = useRef(null);
   const isTypingRef = useRef(false);
   const typingTimeOutRef = useRef(null);
+  const msgReadTimeOutRef = useRef(null);
   const adminId = localStorage.getItem("adminId");
+
+  const currentReciverIdRef = useRef(null);
+  const batchIdsRef = useRef([]);
 
   useEffect(() => {
     socketRef.current = io("http://localhost:3000", {
@@ -141,6 +141,79 @@ export default function MessagePage() {
       if (typingTimeOutRef.current) clearTimeout(typingTimeOutRef.current);
     };
   }, [messageInput, activeChat]);
+
+  useEffect(() => {
+    const options = {
+      root: null,
+      threshold: 0.5,
+    };
+
+    const callback = (entries, observer) => {
+      let newIdFound = false;
+
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const msgE = entry.target;
+          const msgId = msgE.getAttribute("data-id");
+          const msgStatus = msgE.getAttribute("data-status");
+
+          currentSenderIdRef.current = msgE.getAttribute("data-sender");
+
+          if (msgStatus === "read") {
+            observer.unobserve(msgE);
+            return;
+          }
+
+          if (!batchIdsRef.current.includes(msgId)) {
+            batchIdsRef.current.push(msgId);
+            newIdFound = true;
+          }
+
+          observer.unobserve(msgE);
+        }
+      });
+
+      if (newIdFound) {
+        if (msgReadTimeOutRef.current !== null) {
+          clearTimeout(msgReadTimeOutRef.current);
+        }
+
+        msgReadTimeOutRef.current = setTimeout(() => {
+          if (batchIdsRef.current.length > 0) {
+            socketRef.current.emit("MsgsReadBatch", {
+              senderId: currentReceiverIdRef.current,
+              batchIds: [...batchIdsRef.current],
+            });
+            batchIdsRef.current = [];
+          }
+          msgReadTimeOutRef.current = null;
+        }, 2000);
+      }
+    };
+
+    const observer = new IntersectionObserver(callback, options);
+
+    const messageElements = document.querySelectorAll(".chat-messages");
+    messageElements.forEach((element) => observer.observe(element));
+
+    return () => {
+      observer.disconnect();
+
+      if (msgReadTimeOutRef.current !== null) {
+        clearTimeout(msgReadTimeOutRef.current);
+        msgReadTimeOutRef.current = null;
+
+        if (batchIdsRef.current.length > 0) {
+          socketRef.current.emit("MsgsReadBatch", {
+            senderId: currentReciverIdRef.current,
+            batchIds: batchIdsRef.current,
+          });
+
+          batchIdsRef.current = [];
+        }
+      }
+    };
+  }, []);
 
   const goToSpecificUserChat = async (userId) => {
     dispatch(setActiveChat(userId));
@@ -290,16 +363,19 @@ export default function MessagePage() {
                 {messages.map((msg, index) => (
                   <div
                     key={msg._id || index}
-                    className={`flex ${
+                    className={`chat-messages flex  ${
                       adminId === msg.senderId ? "justify-end" : "justify-start"
                     }`}
+                    data-id={msg._id}
+                    data-status={msg.status}
+                    data-sender={msg.senderId}
                   >
                     <div
                       className={`${
                         adminId === msg.senderId ? "bg-[#d9fdd3]" : "bg-white"
                       } max-w-[65%] rounded-lg px-3 py-1.5 shadow-sm relative text-[14.2px]`}
                     >
-                      <p className="pr-12 break-words text-[#111b21]">
+                      <p className={`pr-12 break-words text-[#111b21] `}>
                         {msg.content}
                       </p>
 
