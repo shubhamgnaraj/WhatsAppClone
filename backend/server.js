@@ -76,6 +76,10 @@ io.on("connection", async (socket) => {
         io.to(chattingWith).emit("msgStatusUpdate", { reciverId: adminId, status: 'read' })
     });
 
+    socket.on("MsgsReadBatch", (batches) => {
+        console.log("redis_batch: ", batches)
+    })
+
     socket.on("typing_start", ({ reciverId }) => {
         socket.to(reciverId).emit("typingStart", { reciverId, senderId: adminId });
     });
