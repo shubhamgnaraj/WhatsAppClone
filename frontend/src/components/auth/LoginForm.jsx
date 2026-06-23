@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { loginUserService } from "../service/userAuth.service";
+import { loginUserService } from "../../service/userAuth.service";
 import { useNavigate } from "react-router-dom";
 
 function LoginForm() {

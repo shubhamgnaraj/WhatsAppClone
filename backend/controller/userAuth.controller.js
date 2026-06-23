@@ -15,6 +15,7 @@ export const registerUser = async (req, res) => {
       userName,
       email,
       password,
+      userPhoto: "123abc"
     });
 
     const token = jwt.sign({ id: user._id }, "JWT-SECRET");

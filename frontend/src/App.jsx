@@ -1,7 +1,7 @@
 import "./App.css";
 import { Router, Route, Routes } from "react-router-dom";
-import RegisterForm from "./components/RegisterForm";
-import LoginForm from "./components/LoginForm";
+import RegisterForm from "./components/auth/RegisterForm";
+import LoginForm from "./components/auth/LoginForm";
 import Home from "./components/Home";
 import MessagePage from "./components/MessagePage";
 

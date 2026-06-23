@@ -1,93 +1,271 @@
-import User from "../models/user.model.js"
-import Message from "../models/message.model.js"
-import mongoose from "mongoose"
-
-export const getTheUser = async (req, res) => {
-
-    const userId = req.user.id
-
-    console.log("userId", userId)
-    try {
-        const user = await User.findById(userId)
-
-        if (!user) {
-            return res.status(400).json({ message: "User not found" })
-        }
-
-        res.status(200).json({ message: "User found successfully", user })
-    } catch (error) {
-        res.status(400).json({ message: `User not found: ${error.message}` })
-    }
-}
+import User from "../models/user.model.js";
+import Message from "../models/message.model.js";
+import mongoose from "mongoose";
+import cloudinary from "../service/cloudinary.service.js";
+import UserAndGroupAdmin from "../models/user&group_admin.model.js";
 
 export const addUserAdminList = async (req, res) => {
     const { adminDecidedName, email } = req.body;
-
+    const adminId = req.user._id;
     try {
-
         const userExist = await User.findOne({ email });
 
-        if (!userExist) return res.status(400).json({ message: "User not Exist" })
+        if (!userExist) return res.status(400).json({ message: "User not Exist" });
 
         const userId = userExist._id;
 
         const admin = await User.findByIdAndUpdate(
-            req.user._id,
+            adminId,
             {
                 $set: { adminDecideName: adminDecidedName },
-                $addToSet: { userIds: userId }
+                $addToSet: { userIds: userId },
             },
-            { returnDocument: "after" }
-        )
+            { returnDocument: "after" },
+        );
 
-        if (!admin) return res.status(400).json({ message: "Admin not Exist" })
+        await UserAndGroupAdmin.create({
+            adminId,
+            adminType: "User",
+            groupOrUserChatId: userId,
+            groupOrUserChatType: "Private",
+        });
 
-        res.status(200).json({ message: "User added successfully", admin })
+        if (!admin) return res.status(400).json({ message: "Admin not Exist" });
+
+        res.status(200).json({ message: "User added successfully", admin });
     } catch (error) {
-        res.status(400).json({ message: `Somthing went problem to add User: ${error.message}` })
+        res
+            .status(400)
+            .json({ message: `Somthing went problem to add User: ${error.message}` });
     }
-}
+};
 
-export const getUsersInAdminList = async (req, res) => {
-    const currAdmin = req.user;
+export const getUsersAndGroupsAdminList = async (req, res) => {
+    const currUserId = req.user._id;
 
-    try {
+    const adminList = await User.aggregate([
+        {
+            $match: { _id: currUserId },
+        },
 
-        if (!currAdmin) return res.status(400).json({ message: "Admin not found" })
+        {
+            $facet: {
+                managedUsers: [
+                    {
+                        $lookup: {
+                            from: "userandgroupadmins",
+                            pipeline: [
+                                {
+                                    $match: {
+                                        adminId: currUserId,
+                                        groupOrUserChatType: "Private",
+                                    },
+                                },
+                                {
+                                    $lookup: {
+                                        from: "users",
+                                        localField: "groupOrUserChatId",
+                                        foreignField: "_id",
+                                        as: "details",
+                                    },
+                                },
+                                { $unwind: "$details" },
+                            ],
+                            as: "adminData",
+                        },
+                    },
+                    { $unwind: "$adminData" },
+                    {
+                        $project: {
+                            _id: 0,
+                            id: "$adminData.groupOrUserChatId",
+                            type: { $literal: "User" },
+                            displayName: "$adminData.details.userName",
+                            displayPhoto: "$adminData.details.userPhoto",
+                        },
+                    },
+                ],
 
-        if (!currAdmin.userIds.length > 0) return res.status(201).json({ message: "You are not added users" })
+                managedGroups: [
+                    {
+                        $lookup: {
+                            from: "userandgroupadmins",
+                            pipeline: [
+                                {
+                                    $match: {
+                                        adminId: currUserId,
+                                        groupOrUserChatType: "Group",
+                                    },
+                                },
+                                {
+                                    $lookup: {
+                                        from: "groups",
+                                        localField: "groupOrUserChatId",
+                                        foreignField: "_id",
+                                        as: "details",
+                                    },
+                                },
+                                { $unwind: "$details" },
+                            ],
+                            as: "adminData",
+                        },
+                    },
+                    { $unwind: "$adminData" },
+                    {
+                        $project: {
+                            _id: 0,
+                            id: "$adminData.groupOrUserChatId",
+                            type: { $literal: "Group" },
+                            displayName: "$adminData.details.groupName",
+                            displayPhoto: "$adminData.details.groupIcon",
+                        },
+                    },
+                ],
 
-        const allUsers = await User.find(
-            { _id: { $in: currAdmin.userIds } }
-        )
+                adminJoinedGroup: [
+                    {
+                        $lookup: {
+                            from: "groupmembers",
+                            pipeline: [
+                                { $match: { memberId: currUserId } },
+                                {
+                                    $lookup: {
+                                        from: "groups",
+                                        localField: "groupId",
+                                        foreignField: "_id",
+                                        as: "groupInfo",
+                                    },
+                                },
+                                { $unwind: "$groupInfo" },
+                            ],
+                            as: "memberData",
+                        },
+                    },
+                    { $unwind: "$memberData" },
+                    {
+                        $project: {
+                            _id: 0,
+                            id: "$memberData.groupInfo._id",
+                            type: { $literal: "Group" },
+                            displayName: "$memberData.groupInfo.groupName",
+                            displayPhoto: "$memberData.groupInfo.groupIcon",
+                        },
+                    },
+                ],
+            },
+        },
 
-        res.status(200).json({ message: "user found successfully", allUsers })
-    } catch (error) {
-        res.status(400).json({ message: `Soemthing went error to get all users: ${error.message}` })
+        {
+            $project: {
+                allManagedUandG: {
+                    $concatArrays: [
+                        "$managedUsers",
+                        "$managedGroups",
+                        "$adminJoinedGroup",
+                    ],
+                },
+            },
+        },
+    ]);
+
+    const finalResult = adminList[0].allManagedUandG;
+    if (finalResult.length <= 0) {
+        return res
+            .status(200)
+            .json({ message: "you are not create any group or not add any users!" });
     }
-}
+
+    res.status(200).json({ message: "result", finalResult });
+};
 
 export const getTheMessgesSAndR = async (req, res) => {
     try {
-        const adminId = req.user._id
-        const { reciverId } = req.params
+        const admin = req.user;
+        const { receiverId, chatType } = req.query;
 
-        if (!adminId || !reciverId) {
-            return res.status(400).json({ message: "Id's missing" })
+        if (!admin._id || !receiverId) {
+            return res.status(400).json({ message: "Id's missing" });
         }
 
-        const mongoAId = new mongoose.Types.ObjectId(adminId)
-        const mongoUId = new mongoose.Types.ObjectId(reciverId)
+        const mongoAId = new mongoose.Types.ObjectId(admin._id);
+        const mongoUId = new mongoose.Types.ObjectId(receiverId);
+        let chatHistory;
 
-        const chatHistory = await Message.find({
-            $or: [
-                { senderId: mongoAId, reciverId: mongoUId },
-                { senderId: mongoUId, reciverId: mongoAId }
-            ]
-        }).sort({createdAt: 1})
+        if (chatType === "Group") {
+            chatHistory = await Message.aggregate([
+                { $match: { reciverId: mongoUId, chatType: "Group" } },
+                { $sort: { createdAt: 1 } },
+                {
+                    $lookup: {
+                        from: "users",
+                        localField: "senderId",
+                        foreignField: "_id",
+                        as: "senderDetails"
+                    }
+                },
+                {
+                    $addFields: {
+                        senderDetails: { $arrayElemAt: ["$senderDetails", 0] }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 1,
+                        senderId: 1,
+                        reciverId: 1,
+                        messageType: 1,
+                        chatType: 1,
+                        content: 1,
+                        createdAt: 1,
+                        senderName: "$senderDetails.userName",
+                        email: "$senderDetails.email",
+                        lastSeen: "$senderDetails.lastSeen"
+                    }
+                }
+            ]);
+        } else {
+            chatHistory = await Message.find({
+                chatType: "User",
+                $or: [
+                    { senderId: mongoAId, reciverId: mongoUId },
+                    { senderId: mongoUId, reciverId: mongoAId },
+                ],
+            }).sort({ createdAt: 1 });
+        }
 
-        res.status(200).json({ message: 'sccussefully fetched chatHistory', chatHistory })
+        console.log(chatHistory)
+        res
+            .status(200)
+            .json({ message: "successfully fetched chatHistory", chatHistory });
     } catch (error) {
-        res.status(400).json({ message: "Admin not get messages: ", error })
+        res.status(400).json({ message: "Admin not get messages: ", error });
     }
-}
+};
+
+// export const mediaHandler = async (req, res) => {
+//     const filePath = req.file;
+
+//     if (!req.file || !req.file.buffer) {
+//         return res.status(400).json({
+//             success: false,
+//             message: "Bhidu, lagta hai frontend se file sahi se aayi nahi!"
+//         });
+//     }
+
+//     try {
+
+//         const b64 = Buffer.from(req.file.buffer).toString("base64");
+//         const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+
+//         const result = await cloudinary.uploader.upload(dataURI, {
+//             folder: "media",
+//             resource_type: "auto"
+//         })
+
+//         if (result) {
+//             console.log('result: ', result)
+//         }
+//     } catch (error) {
+//         res.status(400).json({ message: "something went wrong inside mediaHandler: ", error })
+//     }
+// }

@@ -1,6 +1,6 @@
 import React from "react";
 import { useState } from "react";
-import { registerUserService } from "../service/userAuth.service";
+import { registerUserService } from "../../service/userAuth.service";
 import { useNavigate } from "react-router-dom";
 
 function RegisterForm() {
