@@ -84,7 +84,7 @@ io.on("connection", async (socket) => {
         io.to(senderId).emit("msgStatusUpdate", { batchIds, status: "read" });
     });
 
-    socket.on("typing_start", ({ reciverId,  }) => {
+    socket.on("typing_start", ({ reciverId, }) => {
         console.log("typing start");
         socket.to(reciverId).emit("typingStart", { reciverId, senderId: adminId });
     });
@@ -99,7 +99,6 @@ io.on("connection", async (socket) => {
             const mongoRId = new mongoose.Types.ObjectId(reciverId);
             const mongoSId = new mongoose.Types.ObjectId(adminId);
 
-            console.log("chatype: ", chatType)
             if (chatType === "Group") {
                 const createMsg = await Message.create({
                     reciverId,
@@ -115,7 +114,6 @@ io.on("connection", async (socket) => {
 
                 let memberIds = await client.sMembers(`group_members:${reciverId}`)
 
-                console.log('memberIds: ', memberIds)
                 if (!memberIds || memberIds.length === 0) {
                     const members = await GroupMember.find({ groupId: mongoRId }).select("memberId");
 
@@ -131,53 +129,54 @@ io.on("connection", async (socket) => {
                     if (memId === adminId) return;
 
                     const isMemOnline = await client.sIsMember('online', memId);
-
-                    console.log("isMemOnline: ", isMemOnline);
-
                     if (isMemOnline) {
+
+                        console.log('ismemOnline: ', memId)
                         io.to(memId).emit("reciveAMsg", createMsg);
                     } else await client.hIncrBy(`unRead:${memId}`, reciverId, 1)
                 })
 
                 return;
-            }
-
-            let localStatus;
-            const isOnline = await client.sIsMember(`online`, reciverId);
-            const currentChatWith = await client.get(`chat_with:${reciverId}`);
-            const isChatWindowOpen = currentChatWith === adminId;
-
-            if (isOnline && !isChatWindowOpen) localStatus = "delivered";
-            else if (isOnline && isChatWindowOpen) localStatus = "read";
-            else localStatus = "sent";
-
-            const createMsg = await Message.create({
-                reciverId: mongoRId,
-                senderId: mongoSId,
-                messageType: "text",
-                chatType,
-                content,
-                createdAt: Date.now(),
-                status: localStatus,
-            });
-
-            socket.emit("msgCreated", createMsg);
-
-            if (chatType === 'Group') {
-                io.to(reciverId).emit("reciverAMsg", createMsg)
-            }
-            if (isOnline && isChatWindowOpen) {
-                io.to(reciverId).emit("reciveAMsg", createMsg);
-
-            } else if (isOnline && !isChatWindowOpen) {
-                const updateCount = await client.hIncrBy(`unread:${reciverId}`, adminId, 1);
-                io.to(reciverId).emit("notificationMsg", { senderId: adminId, unreadCount: updateCount });
-                io.to(reciverId).emit("msgSendSuccessfully", { readByUser: adminId, status: "delivered" });
-
             } else {
-                await client.hIncrBy(`unread:${reciverId}`, adminId, 1);
-                io.to(reciverId).emit("msgSendSuccessfully", { readByUser: adminId, status: "sent" });
+                let localStatus;
+                const isOnline = await client.sIsMember(`online`, reciverId);
+                const currentChatWith = await client.get(`chat_with:${reciverId}`);
+                const isChatWindowOpen = currentChatWith === adminId;
+
+                if (isOnline && !isChatWindowOpen) localStatus = "delivered";
+                else if (isOnline && isChatWindowOpen) localStatus = "read";
+                else localStatus = "sent";
+
+                const createMsg = await Message.create({
+                    reciverId: mongoRId,
+                    senderId: mongoSId,
+                    messageType: "text",
+                    chatType,
+                    content,
+                    createdAt: Date.now(),
+                    status: localStatus,
+                });
+
+                socket.emit("msgCreated", createMsg);
+
+                if (chatType === 'Group') {
+                    io.to(reciverId).emit("reciverAMsg", createMsg)
+                }
+                if (isOnline && isChatWindowOpen) {
+                    io.to(reciverId).emit("reciveAMsg", createMsg);
+
+                } else if (isOnline && !isChatWindowOpen) {
+                    const updateCount = await client.hIncrBy(`unread:${reciverId}`, adminId, 1);
+                    io.to(reciverId).emit("notificationMsg", { senderId: adminId, unreadCount: updateCount });
+                    io.to(reciverId).emit("msgSendSuccessfully", { readByUser: adminId, status: "delivered" });
+
+                } else {
+                    await client.hIncrBy(`unread:${reciverId}`, adminId, 1);
+                    io.to(reciverId).emit("msgSendSuccessfully", { readByUser: adminId, status: "sent" });
+                }
             }
+
+
 
         } catch (error) {
             socket.emit("errorOccured", error.message);

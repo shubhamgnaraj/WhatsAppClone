@@ -125,13 +125,13 @@ function CreateGroupScreen() {
               {users?.length > 0 ? (
                 users.map((user) => (
                   <div
-                    key={user._id}
-                    onClick={() => handleOnAddUserInGroup(user._id)}
-                    className={`flex items-center  gap-3 px-3 py-3 cursor-pointer border-b border-[#f0f2f5]  ${formData.groupMembers.has(user._id) && "bg-[#00806919]"}`}
+                    key={user.id}
+                    onClick={() => handleOnAddUserInGroup(user.id)}
+                    className={`flex items-center  gap-3 px-3 py-3 cursor-pointer border-b border-[#f0f2f5]  ${formData.groupMembers.has(user.id) && "bg-[#00806919]"}`}
                   >
                     <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0 overflow-hidden object-center">
                       <img
-                        src={`https://dicebear.com{user.userName}`}
+                        src={`https://dicebear.com${user.displayName}`}
                         alt="avatar"
                         className="w-full h-full"
                       />
@@ -139,7 +139,7 @@ function CreateGroupScreen() {
                     <div className="flex-1 min-w-0 ">
                       <div className="flex justify-between items-baseline mb-1">
                         <h2 className="font-normal text-sm truncate">
-                          {user.userName}
+                          {user.displayName}
                         </h2>
                       </div>
                     </div>

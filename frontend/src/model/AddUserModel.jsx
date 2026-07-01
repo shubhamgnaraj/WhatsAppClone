@@ -22,15 +22,16 @@ function AddUserModel() {
 
     const data = await addUserInTheAdminList(formData);
 
+    console.log("addUserData: ", data)
     if (data) {
-      dispatch(addUserIntheList(data.admin));
+      dispatch(addUserIntheList(data.localUserData));
       dispatch(handleAddUserModel());
     }
   };
   const { addUserModel } = useSelector((state) => state.chat);
   return (
     <div
-      className={`open_model ${addUserModel ? "translate-x-0 opacity-100" : "-translate-x-10 opacity-0"}`}
+      className={`open_model ${addUserModel ? "translate-x-0 opacity-100 z-20" : "-translate-x-10 opacity-0"}`}
     >
       <div className="flex h-full w-full flex-col overflow-hidden bg-[#f0f2f5] shadow-2xl rounded-sm">
         <div className="flex h-14 items-end bg-[#008069] p-5 text-white">

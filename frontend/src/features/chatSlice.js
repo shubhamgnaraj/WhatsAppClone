@@ -106,7 +106,7 @@ const chatAppSlice = createSlice({
     },
     
     addUserIntheList: (state, action) => {
-      state.users.push(action.payload)
+     state.users.push(action.payload)
     },
 
     handleCreateGroupModel: (state) => {

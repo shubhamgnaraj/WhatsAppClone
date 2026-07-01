@@ -33,6 +33,7 @@ import chatListener from "../socket/socketListner";
 import RightMsgInputBox from "./rightSidebar/RightMsgInputBox";
 import AddUserModel from "../model/AddUserModel";
 import CreateGroupScreen from "../model/CreateGroupScreen";
+import GroupInfoModel from "../model/GroupInfoModel";
 
 export default function MessagePage() {
   const dispatch = useDispatch();
@@ -45,6 +46,7 @@ export default function MessagePage() {
     userType,
     addUserModel,
   } = useSelector((state) => state.chat);
+  const {isGroupInfo} = useSelector(state => state.group);
 
   const [messageInput, setMessageInput] = React.useState("");
   const [file, setFile] = React.useState("");
@@ -178,7 +180,9 @@ export default function MessagePage() {
           {activeChat ? (
             <>
               <RightChatWindowHeader />
-
+              {
+                isGroupInfo && <GroupInfoModel />
+              }
               <AdminUserMsg socket={socketRef.current} />
 
               <RightMsgInputBox

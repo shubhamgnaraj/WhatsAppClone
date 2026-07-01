@@ -29,8 +29,7 @@ const userSchema = new mongoose.Schema({
     lastSeen: {
         type: Date,
         default: Date.now
-    },
-    userIds: []
+    }
 })
 
 export default mongoose.model("User", userSchema);

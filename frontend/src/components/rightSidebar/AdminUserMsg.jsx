@@ -3,7 +3,7 @@ import { useSelector } from "react-redux";
 import { Check, CheckCheck } from "lucide-react";
 
 function AdminUserMsg({ socket }) {
-  const { messages } = useSelector((state) => state.chat);
+  const { messages, userType } = useSelector((state) => state.chat);
   const adminId = localStorage.getItem("adminId");
 
   const batchIdsRef = useRef([]);
@@ -11,6 +11,8 @@ function AdminUserMsg({ socket }) {
   const msgReadTimeOutRef = useRef(null);
 
   useEffect(() => {
+
+    if(userType === "Group") return;
     const options = {
       root: null,
       threshold: 0.5,

@@ -1,19 +1,20 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-    group: []
+    group: [],
+    isGroupInfo: false
 };
 
 const groupSlice = createSlice({
     name: "group",
     initialState,
     reducers: {
-        addGroups: (state, action) => {
-            console.log('e')
+        setIsGroupInfo: (state) => {
+            state.isGroupInfo = !state.isGroupInfo
         }
     }
-})
+});
 
-const {addGroups} = groupSlice.actions;
+export const { setIsGroupInfo } = groupSlice.actions;
 
-export default groupSlice.reducer
+export default groupSlice.reducer;

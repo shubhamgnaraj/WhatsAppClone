@@ -12,6 +12,11 @@ const userAndGroupAdminSchema = mongoose.Schema({
         required: true
     },
 
+    adminDecideName: {
+        type: String,
+        default: null
+    },
+
     groupOrUserChatId: {
         type: mongoose.Schema.Types.ObjectId,
         required: true
@@ -22,6 +27,7 @@ const userAndGroupAdminSchema = mongoose.Schema({
     },
 })
 
+userAndGroupAdminSchema.index({ adminId: 1, groupOrUserChatId: 1 }, { unique: true })
 
 const UserAndGroupAdmin = mongoose.model("UserAndGroupAdmin", userAndGroupAdminSchema);
 

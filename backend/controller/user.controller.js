@@ -5,34 +5,36 @@ import cloudinary from "../service/cloudinary.service.js";
 import UserAndGroupAdmin from "../models/user&group_admin.model.js";
 
 export const addUserAdminList = async (req, res) => {
-    const { adminDecidedName, email } = req.body;
+    const { userName, email } = req.body;
+
+    console.log('userData: ', req.body)
     const adminId = req.user._id;
+
     try {
         const userExist = await User.findOne({ email });
 
-        if (!userExist) return res.status(400).json({ message: "User not Exist" });
+        if (!userExist) return res.status(400).json({ message: "User not exist!" });
 
         const userId = userExist._id;
 
-        const admin = await User.findByIdAndUpdate(
-            adminId,
+        const addUserInList = await UserAndGroupAdmin.findOneAndUpdate(
+            { adminId: adminId, groupOrUserChatId: userId },
+
             {
-                $set: { adminDecideName: adminDecidedName },
-                $addToSet: { userIds: userId },
+                $setOnInsert: {
+                    adminId,
+                    adminType: "User",
+                    adminDecideName: userName,
+                    groupOrUserChatId: userId,
+                    groupOrUserChatType: "Private",
+                },
             },
-            { returnDocument: "after" },
+            { upsert: true, new: true },
         );
 
-        await UserAndGroupAdmin.create({
-            adminId,
-            adminType: "User",
-            groupOrUserChatId: userId,
-            groupOrUserChatType: "Private",
-        });
+        const localUserData = { id: userExist._id, type: "Private", displayName: userName, displayPhoto: userExist.userPhoto }
 
-        if (!admin) return res.status(400).json({ message: "Admin not Exist" });
-
-        res.status(200).json({ message: "User added successfully", admin });
+        res.status(200).json({ message: "User added successfully", localUserData });
     } catch (error) {
         res
             .status(400)
@@ -54,6 +56,7 @@ export const getUsersAndGroupsAdminList = async (req, res) => {
                     {
                         $lookup: {
                             from: "userandgroupadmins",
+
                             pipeline: [
                                 {
                                     $match: {
@@ -80,7 +83,7 @@ export const getUsersAndGroupsAdminList = async (req, res) => {
                             _id: 0,
                             id: "$adminData.groupOrUserChatId",
                             type: { $literal: "User" },
-                            displayName: "$adminData.details.userName",
+                            displayName: "$adminData.adminDecideName",
                             displayPhoto: "$adminData.details.userPhoto",
                         },
                     },
@@ -175,6 +178,7 @@ export const getUsersAndGroupsAdminList = async (req, res) => {
             .json({ message: "you are not create any group or not add any users!" });
     }
 
+    console.log(finalResult);
     res.status(200).json({ message: "result", finalResult });
 };
 
@@ -200,13 +204,13 @@ export const getTheMessgesSAndR = async (req, res) => {
                         from: "users",
                         localField: "senderId",
                         foreignField: "_id",
-                        as: "senderDetails"
-                    }
+                        as: "senderDetails",
+                    },
                 },
                 {
                     $addFields: {
-                        senderDetails: { $arrayElemAt: ["$senderDetails", 0] }
-                    }
+                        senderDetails: { $arrayElemAt: ["$senderDetails", 0] },
+                    },
                 },
                 {
                     $project: {
@@ -219,9 +223,9 @@ export const getTheMessgesSAndR = async (req, res) => {
                         createdAt: 1,
                         senderName: "$senderDetails.userName",
                         email: "$senderDetails.email",
-                        lastSeen: "$senderDetails.lastSeen"
-                    }
-                }
+                        lastSeen: "$senderDetails.lastSeen",
+                    },
+                },
             ]);
         } else {
             chatHistory = await Message.find({
@@ -233,7 +237,6 @@ export const getTheMessgesSAndR = async (req, res) => {
             }).sort({ createdAt: 1 });
         }
 
-        console.log(chatHistory)
         res
             .status(200)
             .json({ message: "successfully fetched chatHistory", chatHistory });
