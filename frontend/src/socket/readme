@@ -1,0 +1,68 @@
+// import {
+//   clearUserTyping,
+//   removeUnreadCount,
+//   replaceMessageWithDB,
+//   receiveMessage,
+//   setUserTyping,
+//   setUnreadCount,
+//   updateMessageStatus,
+//   updateUnreadCount,
+//   userReadMessages
+// } from '../features/chatSlice'
+// import { socket } from './socket'
+
+// const chatListener = (socket, dispatch, activeChat) => {
+
+//   socket.on("reciveAMsg", (msgData) => {
+//     dispatch(receiveMessage(msgData));
+//   });
+
+//   socket.on(
+//     "msgStatusUpdate",
+//     ({ batchIds, status, reciverId }) => {
+//       if (batchIds) {
+//         dispatch(userReadMessages({ batchIds, status }));
+//       } else if (reciverId) {
+//         dispatch(updateMessageStatus({ reciverId, status }));
+//       }
+//     },
+//   );
+
+//   socket.on("unreadMsgesCount", (countData) => {
+//     dispatch(setUnreadCount(countData || {}));
+//   });
+
+//   socket.on("notificationMsg", ({ senderId, unreadCount }) => {
+//     dispatch(updateUnreadCount({ userId: senderId, count: unreadCount }));
+//   });
+
+//   socket.on("removeUnreadCount", ({ userId }) => {
+//     dispatch(removeUnreadCount(userId));
+//   });
+
+//   socket.on("msgCreated", (createdMsg) => {
+//     dispatch(replaceMessageWithDB(createdMsg));
+//   });
+
+//   socket.on("typingStart", (data) => {
+//     dispatch(setUserTyping({ senderId: data.senderId, typing: "Typing..." }));
+//   });
+
+//   socket.on("typingStop", () => {
+//     dispatch(clearUserTyping());
+//   });
+
+//   return () => {
+//     socket.off("reciveAMsg");
+//     socket.off("unreadMsgesCount");
+//     socket.off("notificationMsg");
+//     socket.off("removeUnreadCount");
+//     socket.off("msgStatusUpdate");
+//     socket.off("msgCreated");
+//     socket.off("typingStart");
+//     socket.off("typingStop");
+//     socket.off("errorOccured");
+//   }
+// }
+
+// export default chatListener;

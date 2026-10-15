@@ -9,12 +9,12 @@ const initialState = {
   usersUnreadMsgCount: {},
   userTyping: {},
 
-  addUserModel: false,
-  createGroupModel: false
+  showUserModel: false,
+  showGroupModel: false
 };
 
 const chatAppSlice = createSlice({
-  name: "chatApp",
+  name: "chat",
   initialState,
   reducers: {
     setUsers: (state, action) => {
@@ -24,7 +24,7 @@ const chatAppSlice = createSlice({
     setActiveChat: (state, action) => {
       state.activeChat = action.payload;
     },
-    
+
     setUserType: (state, action) => {
       state.userType = action.payload
     },
@@ -49,13 +49,13 @@ const chatAppSlice = createSlice({
     replaceMessageWithDB: (state, action) => {
       const createdMsg = action.payload;
       state.messages = state.messages.map((msg) => {
-        const isMatch = 
+        const isMatch =
           msg.senderId === createdMsg.senderId &&
           msg.reciverId === createdMsg.reciverId &&
           msg.content === createdMsg.content &&
           msg.chatType === createdMsg.chatType &&
-          !msg._id; 
-        
+          !msg._id;
+
         return isMatch ? createdMsg : msg;
       });
     },
@@ -99,18 +99,28 @@ const chatAppSlice = createSlice({
         }
         return msg;
       })
+
     },
 
-    handleAddUserModel: (state) => {
-      state.addUserModel = !state.addUserModel
+    showUserAddModel: (state) => {
+      state.showUserModel = state.showUserModel ? false : true;
+      
+      if (state.showUserModel) {
+        state.showGroupModel = false
+      }
+
     },
-    
+
     addUserIntheList: (state, action) => {
-     state.users.push(action.payload)
+      state.users.push(action.payload)
     },
 
-    handleCreateGroupModel: (state) => {
-      state.createGroupModel = !state.createGroupModel;
+    showGroupCreateModel: (state) => {
+      state.showGroupModel = state.showGroupModel ? false : true;
+
+      if (state.showGroupModel) {
+        state.showUserModel = false
+      }
     }
   },
 });
@@ -131,9 +141,9 @@ export const {
   receiveMessage,
   clearMessages,
   userReadMessages,
-  handleAddUserModel,
+  showUserAddModel,
   addUserIntheList,
-  handleCreateGroupModel
+  showGroupCreateModel
 
 } = chatAppSlice.actions;
 

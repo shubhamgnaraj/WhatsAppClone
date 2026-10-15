@@ -3,23 +3,21 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   getAdminUsers,
   getTheMessagesSAndR,
-} from "../../service/admin.service";
+} from "../../../service/admin.service";
 import {
   setUsers,
   setActiveChat,
   setMessages,
   setUserType,
   removeUnreadCount,
-} from "../../features/chatSlice";
+} from "../../../features/chatSlice";
 
-function LeftUserList({ socket }) {
+function UserList() {
   const {
     users,
     userTyping,
     activeChat,
-    usersUnreadMsgCount,
-    addUserModel,
-    createGroupModel,
+    usersUnreadMsgCount
   } = useSelector((state) => state.chat);
 
   const dispatch = useDispatch();
@@ -49,15 +47,22 @@ function LeftUserList({ socket }) {
       dispatch(setMessages(adminUserMsgData.chatHistory));
     }
 
-    socket.emit("chatOpenClearUnread", { userId });
-    socket.emit("chat_opend", { chattingWith: userId });
+    dispatch({
+      type: "socket/clearUnreadCount",
+      payload: userId,
+    });
+
+    dispatch({
+      type: "socket/chatOpen",
+      payload: userId,
+    });
 
     dispatch(removeUnreadCount(userId));
   };
 
   return (
     <div
-      className={`flex-1 overflow-y-auto bg-white absolute top-0 left-0 w-full ${!addUserModel && !createGroupModel ? "z-10 delay-500" : "z-0"}`}
+      className={`flex-1 overflow-y-auto bg-white absolute top-0 left-0 w-full ml-2 rounded-lg`}
     >
       {users?.length > 0 ? (
         users.map((user) => (
@@ -122,4 +127,4 @@ function LeftUserList({ socket }) {
   );
 }
 
-export default LeftUserList;
+export default UserList;

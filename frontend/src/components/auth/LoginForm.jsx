@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { loginUserService } from "../../service/userAuth.service";
 import { useNavigate } from "react-router-dom";
+import { connectSocket } from "../../socket/socket";
+import { socketListner } from "../../socket/socketListner";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -17,8 +19,11 @@ function LoginForm() {
     const data = await loginUserService({ email, password });
 
     if(data) {
-      localStorage.setItem("adminId", data.userExist._id)
-      navigate("/api/admin/users")
+      localStorage.setItem("adminId", data.userExist._id);
+      localStorage.setItem("token", data.token);
+      connectSocket();
+      socketListner();
+      navigate("/users/chats");
     }
     setEmail("");
     setPassword("");

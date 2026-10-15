@@ -1,18 +1,28 @@
-import { useRef, useEffect } from "react";
-import { useSelector } from "react-redux";
-import { Check, CheckCheck } from "lucide-react";
+import { useRef, useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Check, CheckCheck, ChevronDown } from "lucide-react";
+import ExpandedMsgOptions from "./ExpandedMsgOptions";
+import { addAndRemoveOptExpandedId } from "../../../features/messageSlice";
 
-function AdminUserMsg({ socket }) {
-  const { messages, userType } = useSelector((state) => state.chat);
-  const adminId = localStorage.getItem("adminId");
+function MessagesSection({ socket }) {
+  const [hoveredMsgId, setHoveredMsgId] = useState(null);
+  const [expandedMsgId, setExpandedMsgId] = useState(null);
 
   const batchIdsRef = useRef([]);
   const currentReciverIdRef = useRef(null);
   const msgReadTimeOutRef = useRef(null);
 
+  const { messages, userType } = useSelector((state) => state.chat);
+
+  const [msges, setMsges] = useState(messages);
+  const { messageOptExpandedId } = useSelector((state) => state.message);
+  const dispatch = useDispatch();
+
+  const adminId = localStorage.getItem("adminId");
+
   useEffect(() => {
 
-    if(userType === "Group") return;
+    if (userType === "Group") return;
     const options = {
       root: null,
       threshold: 0.5,
@@ -50,9 +60,12 @@ function AdminUserMsg({ socket }) {
 
         msgReadTimeOutRef.current = setTimeout(() => {
           if (batchIdsRef.current.length > 0) {
-            socket.emit("MsgsReadBatch", {
-              senderId: currentReciverIdRef.current,
-              batchIds: [...batchIdsRef.current],
+            dispatch({
+              type: "socket/msgsReadBatch",
+              payload: {
+                senderId: currentReciverIdRef.current,
+                batchIds: [...batchIdsRef.current],
+              },
             });
             batchIdsRef.current = [];
           }
@@ -74,9 +87,12 @@ function AdminUserMsg({ socket }) {
         msgReadTimeOutRef.current = null;
 
         if (batchIdsRef.current.length > 0) {
-          socket.emit("MsgsReadBatch", {
-            senderId: currentReciverIdRef.current,
-            batchIds: batchIdsRef.current,
+          dispatch({
+            type: "socket/msgsReadBatch",
+            payload: {
+              senderId: currentReciverIdRef.current,
+              batchIds: [...batchIdsRef.current],
+            },
           });
 
           batchIdsRef.current = [];
@@ -90,7 +106,7 @@ function AdminUserMsg({ socket }) {
       {messages.map((msg, index) => (
         <div
           key={msg._id || index}
-          className={`chat-messages flex  ${
+          className={`chat-messages relative flex  ${
             adminId === msg.senderId ? "justify-end" : "justify-start"
           }`}
           data-id={msg._id}
@@ -101,6 +117,10 @@ function AdminUserMsg({ socket }) {
             className={`${
               adminId === msg.senderId ? "bg-[#d9fdd3]" : "bg-white"
             } max-w-[65%] rounded-lg px-3 py-1.5 shadow-sm relative text-[14.2px]`}
+            onMouseEnter={() => setHoveredMsgId(msg._id)}
+            onMouseLeave={() => {
+              setHoveredMsgId(null);
+            }}
           >
             <div className={`flex flex-col justify-start`}>
               {adminId !== msg.senderId && (
@@ -109,8 +129,24 @@ function AdminUserMsg({ socket }) {
                 </div>
               )}
 
-              <div className="pr-12 break-words text-[#111b21] ">
+              <div className="pr-12 break-words text-[#111b21] relative w-full relative">
                 {msg.content}
+
+                {hoveredMsgId === msg._id && (
+                  <div className="absolute right-0 -top-1 z-10 cursor-pointer p-[1px] rounded-md border-[1px] border-gray-100 bg-[#ffffff]">
+                    <ChevronDown
+                      size={12}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        dispatch(addAndRemoveOptExpandedId(msg._id));
+                      }}
+                    />
+                  </div>
+                )}
+
+                {messageOptExpandedId === msg._id && (
+                  <ExpandedMsgOptions message={msg} />
+                )}
               </div>
             </div>
 
@@ -129,12 +165,12 @@ function AdminUserMsg({ socket }) {
                     <Check size={15} />
                   ) : msg.status === "delivered" ? (
                     <CheckCheck size={15} />
-                  ) : (
+                  ) : msg.status === "read" ? (
                     <CheckCheck
                       size={15}
                       className="text-blue-500 font-semibold"
                     />
-                  )}
+                  ) : null}
                 </div>
               )}
             </div>
@@ -145,4 +181,4 @@ function AdminUserMsg({ socket }) {
   );
 }
 
-export default AdminUserMsg;
+export default MessagesSection;

@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { addUserInTheAdminList } from "../service/admin.service";
-import { addUserIntheList, handleAddUserModel } from "../features/chatSlice";
+import { addUserIntheList, showUserAddModel } from "../features/chatSlice";
 
-function AddUserModel() {
+function AdminAddUserModel() {
   const [formData, setFormData] = useState({
     userName: "",
     email: "",
     password: "",
   });
 
+  const { showUserModel } = useSelector((state) => state.chat);
   const dispatch = useDispatch();
 
   const handleChange = (e) => {
@@ -21,22 +22,31 @@ function AddUserModel() {
     e.preventDefault();
 
     const data = await addUserInTheAdminList(formData);
-
-    console.log("addUserData: ", data)
+    
     if (data) {
       dispatch(addUserIntheList(data.localUserData));
-      dispatch(handleAddUserModel());
+      dispatch(showUserAddModel());
     }
   };
-  const { addUserModel } = useSelector((state) => state.chat);
+
   return (
     <div
-      className={`open_model ${addUserModel ? "translate-x-0 opacity-100 z-20" : "-translate-x-10 opacity-0"}`}
+      className={`open_model transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        showUserModel
+          ? "translate-x-0 opacity-100 visible z-20"
+          : "-translate-x-full opacity-0 invisible pointer-events-none z-0"
+      }`}
+      aria-hidden={!showUserModel}
     >
       <div className="flex h-full w-full flex-col overflow-hidden bg-[#f0f2f5] shadow-2xl rounded-sm">
         <div className="flex h-14 items-end bg-[#008069] p-5 text-white">
           <div className="flex items-center gap-6">
-            <button className="hover:opacity-80">
+            <button
+              type="button"
+              onClick={() => dispatch(showUserAddModel())}
+              className="hover:opacity-80"
+              aria-label="Close add user modal"
+            >
               <svg
                 xmlns="http://w3.org"
                 fill="none"
@@ -133,4 +143,4 @@ function AddUserModel() {
   );
 }
 
-export default AddUserModel;
+export default AdminAddUserModel;

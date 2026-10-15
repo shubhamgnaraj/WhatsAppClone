@@ -1,18 +1,16 @@
-import React from "react";
+import React from 'react';
 import { useDispatch, useSelector } from "react-redux";
 import { Search, MoreVertical } from "lucide-react";
-import { setIsGroupInfo } from "../../features/groupSlice";
+import { setIsGroupInfo } from "../../../features/groupSlice";
 
-function RightChatWindowHeader() {
+function MessageSectionHeader() {
 
   const { users, activeChat } = useSelector((state) => state.chat);
   const {isGroupInfo} = useSelector((state) => state.group);
   const dispatch = useDispatch();
 
-  console.log(isGroupInfo)
-
   return (
-    <div className="h-[60px] bg-[#f0f2f5] px-4 flex items-center justify-between border-b border-[#e9edef]">
+     <div className="h-[60px] bg-[#f0f2f5] px-4 flex items-center justify-between border-b border-[#e9edef]">
       <div
         className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 px-2 py-1 rounded-xl"
         onClick={() => dispatch(setIsGroupInfo())}
@@ -38,7 +36,7 @@ function RightChatWindowHeader() {
         <MoreVertical className="w-5 h-5 cursor-pointer" />
       </div>
     </div>
-  );
+  )
 }
 
-export default RightChatWindowHeader;
+export default MessageSectionHeader

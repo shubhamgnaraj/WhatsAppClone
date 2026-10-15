@@ -1,7 +1,7 @@
 import React from 'react'
 import { Search } from 'lucide-react'
 
-function LeftSideUserSearchInput() {
+function UserListSearchInput() {
   return (
      <div className="p-2 bg-white flex items-center border-b border-[#f0f2f5]">
           <div className="bg-[#f0f2f5] flex items-center w-full rounded-lg px-3 py-1.5 gap-3">
@@ -16,4 +16,4 @@ function LeftSideUserSearchInput() {
   )
 }
 
-export default LeftSideUserSearchInput
+export default UserListSearchInput

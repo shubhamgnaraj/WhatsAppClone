@@ -3,9 +3,10 @@ import { useDispatch, useSelector } from "react-redux";
 
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { createAGroup } from "../service/group.service";
-import { handleCreateGroupModel } from "../features/chatSlice";
+import { showGroupCreateModel } from "../features/chatSlice";
+import LeftSidePageBG from "../components/backgroundPages/LeftSidePageBG";
 
-function CreateGroupScreen() {
+function AdminshowGroupModel() {
   const [formData, setFormData] = useState({
     groupName: "",
     groupIcon: "",
@@ -13,7 +14,7 @@ function CreateGroupScreen() {
   });
   const [isUserListOpen, setIsUserListOpen] = useState(false);
 
-  const { createGroupModel, users } = useSelector((state) => state.chat);
+  const { showGroupModel, users } = useSelector((state) => state.chat);
 
   const dispatch = useDispatch();
 
@@ -57,7 +58,7 @@ function CreateGroupScreen() {
     const data = await createAGroup(formData);
 
     if (data) {
-      dispatch(handleCreateGroupModel());
+      dispatch(showGroupCreateModel());
       setFormData({
         groupName: "",
         groupIcon: "",
@@ -68,7 +69,12 @@ function CreateGroupScreen() {
 
   return (
     <div
-      className={`open_model ${createGroupModel ? "translate-x-0 opacity-100" : "-translate-x-10 opacity-0"}`}
+      className={`open_model transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        showGroupModel
+          ? "translate-x-0 opacity-100 visible z-20"
+          : "-translate-x-full opacity-0 invisible pointer-events-none z-0"
+      }`}
+      aria-hidden={!showGroupModel}
     >
       <form onSubmit={handleOnCreateGroup} className="flex-1 bg-white p-6 ">
         <div className="space-y-8">
@@ -121,34 +127,32 @@ function CreateGroupScreen() {
 
         {isUserListOpen && (
           <>
-            <div className="w-full h-[50%] flex flex-col flex-1 overflow-y-auto divide-y divide-[#e9edef] border-l border-t-0 border-r-0 border-b border-gray-200 border gap-y-1 ">
-              {users?.length > 0 ? (
-                users.map((user) => (
-                  <div
-                    key={user.id}
-                    onClick={() => handleOnAddUserInGroup(user.id)}
-                    className={`flex items-center  gap-3 px-3 py-3 cursor-pointer border-b border-[#f0f2f5]  ${formData.groupMembers.has(user.id) && "bg-[#00806919]"}`}
-                  >
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0 overflow-hidden object-center">
-                      <img
-                        src={`https://dicebear.com${user.displayName}`}
-                        alt="avatar"
-                        className="w-full h-full"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0 ">
-                      <div className="flex justify-between items-baseline mb-1">
-                        <h2 className="font-normal text-sm truncate">
-                          {user.displayName}
-                        </h2>
-                      </div>
+            {users?.length > 0 ? (
+              users.map((user) => (
+                <div
+                  key={user.id}
+                  onClick={() => handleOnAddUserInGroup(user.id)}
+                  className={`flex items-center  gap-3 px-3 py-3 cursor-pointer border-b border-[#f0f2f5]  ${formData.groupMembers.has(user.id) && "bg-[#00806919]"}`}
+                >
+                  <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0 overflow-hidden object-center">
+                    <img
+                      src={`https://dicebear.com${user.displayName}`}
+                      alt="avatar"
+                      className="w-full h-full"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0 ">
+                    <div className="flex justify-between items-baseline mb-1">
+                      <h2 className="font-normal text-sm truncate">
+                        {user.displayName}
+                      </h2>
                     </div>
                   </div>
-                ))
-              ) : (
-                <div>kuchh nahi hai bhidu yaha pe</div>
-              )}
-            </div>
+                </div>
+              ))
+            ) : (
+              <div>kuchh nahi hai bhidu yaha pe</div>
+            )}
 
             <div className="pt-4 flex justify-center">
               <button
@@ -203,4 +207,4 @@ function CreateGroupScreen() {
   );
 }
 
-export default CreateGroupScreen;
+export default AdminshowGroupModel;

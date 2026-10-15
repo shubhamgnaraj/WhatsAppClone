@@ -1,12 +1,15 @@
 import React from "react";
 import { Paperclip, Smile, Send } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { addMessage } from "../../features/chatSlice";
+import { addMessage } from "../../../features/chatSlice";
 import { useRef } from "react";
-import { uploadFile } from "../../service/admin.service";
+import { uploadFile } from "../../../service/admin.service";
+import { removeReplyMsgInObj } from "../../../features/messageSlice";
 
-function RightMsgInputBox({ socket, messageInput, setMessageInput }) {
+function SendMessageInput({messageInput, setMessageInput }) {
+
   const { activeChat, userType } = useSelector((state) => state.chat);
+  const { replyMsg, messageOptExpandedId} = useSelector((state) => state.message);
 
   const fileRef = useRef(null);
 
@@ -21,7 +24,9 @@ function RightMsgInputBox({ socket, messageInput, setMessageInput }) {
     }
   };
 
+  
   const handleOnSendMsg = async () => {
+
     // Validate required fields
     if (!messageInput.trim()) {
       console.warn("Message is empty");
@@ -31,10 +36,14 @@ function RightMsgInputBox({ socket, messageInput, setMessageInput }) {
     const payload = { 
       reciverId: activeChat, 
       content: messageInput.trim(), 
-      chatType: userType 
+      chatType: userType, 
+      parrentMsgId: replyMsg?._id ? replyMsg?._id: null,
     };
 
-    socket.emit("sendMessage", payload);
+    dispatch({
+      type: "socket/sendMessage",
+      payload
+    })
 
     const localMsg = {
       reciverId: activeChat,
@@ -42,10 +51,12 @@ function RightMsgInputBox({ socket, messageInput, setMessageInput }) {
       chatType: userType,
       content: messageInput.trim(),
       status: "sent",
+      parrentMsgId: replyMsg?._id,
       createdAt: Date.now(),
     };
 
     dispatch(addMessage(localMsg));
+    dispatch(removeReplyMsgInObj(replyMsg?._id))
     setMessageInput("");
   };
 
@@ -85,4 +96,4 @@ function RightMsgInputBox({ socket, messageInput, setMessageInput }) {
   );
 }
 
-export default RightMsgInputBox;
+export default SendMessageInput;

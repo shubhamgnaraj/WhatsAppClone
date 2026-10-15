@@ -1,39 +1,84 @@
+import { socket } from "./socket";
+import store from "../app/store";
 import {
-   replaceMessageWithDB,
-   receiveMessage,
-   updateMessageStatus,
-   setUserTyping,
-   clearUserTyping
-} from '../features/chatSlice'
-import { socket } from './socket'
+    clearUserTyping,
+    receiveMessage,
+    removeUnreadCount,
+    replaceMessageWithDB,
+    setUnreadCount,
+    setUserTyping,
+    updateUnreadCount,
+    userReadMessages,
+} from "../features/chatSlice";
 
-const chatListener = (socket, dispatch, activeChat) => {
-   // Listen for message created (replace temporary message with DB version)
-   socket.on('msgCreated', (createdMsg) => {
-      console.log('msgCreated:', createdMsg);
-      dispatch(replaceMessageWithDB(createdMsg));
-   });
+const socketHandlers = {
+    reciveAMsg: (messageData) => {
+        store.dispatch(receiveMessage(messageData));
+    },
 
-   // Listen for incoming messages
-   socket.on('reciveAMsg', (msg) => {
-      console.log('reciveAMsg:', msg);
-      dispatch(receiveMessage(msg));
-   });
+    msgStatusUpdate: ({ batchIds, status}) => {
+        if (batchIds) { 
+            store.dispatch(userReadMessages({ batchIds, status }));
+            return;
+        }
 
-   // Listen for message status updates
-   socket.on('msgStatusUpdate', (statusData) => {
-      console.log('msgStatusUpdate:', statusData);
-      dispatch(updateMessageStatus(statusData));
-   });
+        // if (reciverId) {
+        //     store.dispatch(updateMessageStatus({ reciverId, status }));
+        // }
+    },
 
-   // Listen for typing indicators
-   socket.on('typingStart', ({ senderId }) => {
-      dispatch(setUserTyping({ [senderId]: true }));
-   });
+    unreadMsgesCount: (countData) => {
+        store.dispatch(setUnreadCount(countData || {}));
+    },
 
-   socket.on('typingStop', ({ senderId }) => {
-      dispatch(clearUserTyping());
-   });
-}
+    notificationMsg: ({ senderId, unreadCount }) => {
 
-export default chatListener;
+        store.dispatch(updateUnreadCount({ userId: senderId, count: unreadCount }));
+    },
+
+    removeUnreadCount: ({ userId }) => {
+        store.dispatch(removeUnreadCount(userId));
+    },
+
+    msgCreated: (createdMsg) => {
+        store.dispatch(replaceMessageWithDB(createdMsg));
+    },
+
+    typingStarted: (data) => {
+        store.dispatch(setUserTyping({ senderId: data.senderId, typing: "Typing..." }));
+    },
+
+    typingStop: ({ senderId }) => {
+        store.dispatch(clearUserTyping());
+    },
+
+    errorOccured: (error) => {
+        console.error("Socket error:", error);
+    },
+};
+
+let isListenerRegistered = false;
+
+export const socketListner = () => {
+    if (isListenerRegistered) return () => cleanupSocketListner();
+
+    Object.entries(socketHandlers).forEach(([eventName, handler]) => {
+        socket.on(eventName, handler);
+    });
+
+    isListenerRegistered = true;
+
+    return () => cleanupSocketListner();
+};
+
+export function cleanupSocketListner() {
+    if (!isListenerRegistered) return;
+
+    Object.entries(socketHandlers).forEach(([eventName, handler]) => {
+        socket.off(eventName, handler);
+    });
+
+    isListenerRegistered = false;
+};
+
+export default socketListner;

@@ -2,6 +2,8 @@ import React from "react";
 import { useState } from "react";
 import { registerUserService } from "../../service/userAuth.service";
 import { useNavigate } from "react-router-dom";
+import { connectSocket } from "../../socket/socket";
+import { socketListner } from "../../socket/socketListner";
 
 function RegisterForm() {
   const [userName, setUserName] = useState("");
@@ -18,9 +20,11 @@ function RegisterForm() {
     const data = await registerUserService({ userName, email, password });
 
    if(data) {
-    localStorage.setItem("adminId", data.userExist._id)
-
-    navigate("/api/admin/users")
+    localStorage.setItem("adminId", data.userExist._id);
+    localStorage.setItem("token", data.token);
+    connectSocket();
+    socketListner();
+    navigate("/api/admin/users");
    }
 
     setUserName("");
