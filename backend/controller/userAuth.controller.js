@@ -26,7 +26,7 @@ export const registerUser = async (req, res) => {
       secure: false,
     });
 
-    res.status(200).json({ message: "user was created suceessfylly", user });
+    res.status(200).json({ message: "user was created suceessfylly", user, token });
   } catch (error) {
     res.status(400).json({ message: `Authentication errro: ${error.message}` });
   }
@@ -49,7 +49,7 @@ export const loginUser = async (req, res) => {
       secure: false,
     });
 
-    res.status(200).json({ message: "User loogedIn successfully", userExist });
+    res.status(200).json({ message: "User loogedIn successfully", userExist, token });
   } catch (error) {
     res.status(400).json({ message: `User not found: ${error.message}` });
   }

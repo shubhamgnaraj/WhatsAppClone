@@ -7,6 +7,9 @@ import { userValidation } from "./service/authValidation.service.js";
 import { addUserAdminList, getUsersAndGroupsAdminList, getTheMessgesSAndR } from "./controller/user.controller.js";
 import upload from "./service/multer.js";
 import groupRouter from "./router/group.routes.js";
+import statusRouter from "./router/status.routes.js";
+import errorHandler from "./middleware/errorHandler.middleware.js";
+import notFound from "./middleware/notFound.middleware.js";
 
 const app = express();
 
@@ -20,19 +23,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(groupRouter);
-
-app.get("/", (req, res) => {
-    res.send("hello world");
-});
+app.use(statusRouter)
 
 app.post("/register/user", registerUser);
 app.post("/login/user", loginUser);
 
-app.post("/api/add/user", userValidation, addUserAdminList);
 app.get("/api/admin/users", userValidation, getUsersAndGroupsAdminList)
+app.post("/api/add/user", userValidation, addUserAdminList);
 
 app.get("/api/messages/", userValidation, getTheMessgesSAndR);
 // app.post("/api/upload/media", upload.single('media'), userValidation, mediaHandler)
+app.use(notFound)
+app.use(errorHandler)
 
 
 export default app;

@@ -11,8 +11,9 @@ import client from "./service/redisConnection.js";
 import GroupMember from "./models/groupMember.model.js";
 
 const server = http.createServer(app);
+const requestedPort = Number(process.env.PORT) || 3000;
 const port = process.env.PORT || 3000;
-const mongoUrl = process.env.MONGO_URL;
+const mongoUrl = process.env.MONGO_URL || process.env.MONGODB_URI || process.env.MONGO_URI;
 
 const io = new Server(server, {
     cors: {
@@ -65,17 +66,19 @@ io.on("connection", async (socket) => {
         socket.join(userId)
     })
 
-    socket.on("chatOpenClearUnread", async ({ userId }) => {
-        const removeCount = await client.hDel(`unread:${adminId}`, userId);
+    socket.on("clearUnreadCount", async (userId) => {
+        await client.hDel(`unread:${adminId}`, userId);
+
 
         socket.emit("removeUnreadCount", { userId });
     });
 
-    socket.on("chat_opend", async ({ chattingWith }) => {
-        await client.set(`chat_with:${adminId}`, chattingWith);
+    socket.on("chatOpen", async (userId) => {
+        const user = await client.set(`chat_with:${adminId}`, userId);
     });
 
-    socket.on("MsgsReadBatch", async ({ batchIds, senderId }) => {
+    socket.on("msgsReadBatch", async ({ batchIds, senderId }) => {
+        
         const message = await Message.updateMany(
             { _id: { $in: batchIds }, status: { $ne: "read" } },
             { $set: { status: "read" } },
@@ -84,18 +87,20 @@ io.on("connection", async (socket) => {
         io.to(senderId).emit("msgStatusUpdate", { batchIds, status: "read" });
     });
 
-    socket.on("typing_start", ({ reciverId, }) => {
-        console.log("typing start");
-        socket.to(reciverId).emit("typingStart", { reciverId, senderId: adminId });
+    socket.on("typingStart", (reciverId) => {
+        socket.to(reciverId).emit("typingStarted", { reciverId, senderId: adminId });
     });
 
-    socket.on("typing_stop", ({ reciverId }) => {
+    socket.on("typingStop", (reciverId) => {
+
+        console.log('typing stop')
         socket.to(reciverId).emit("typingStop", { reciverId, senderId: adminId });
     });
 
     socket.on("sendMessage", async (messageData) => {
+
         try {
-            const { reciverId, content, chatType } = messageData;
+            const { reciverId, content, chatType, parrentMsgId } = messageData;
             const mongoRId = new mongoose.Types.ObjectId(reciverId);
             const mongoSId = new mongoose.Types.ObjectId(adminId);
 
@@ -131,7 +136,6 @@ io.on("connection", async (socket) => {
                     const isMemOnline = await client.sIsMember('online', memId);
                     if (isMemOnline) {
 
-                        console.log('ismemOnline: ', memId)
                         io.to(memId).emit("reciveAMsg", createMsg);
                     } else await client.hIncrBy(`unRead:${memId}`, reciverId, 1)
                 })
@@ -155,12 +159,13 @@ io.on("connection", async (socket) => {
                     content,
                     createdAt: Date.now(),
                     status: localStatus,
+                    parrentMsgId
                 });
 
                 socket.emit("msgCreated", createMsg);
 
                 if (chatType === 'Group') {
-                    io.to(reciverId).emit("reciverAMsg", createMsg)
+                    io.to(reciverId).emit("reciveAMsg", createMsg)
                 }
                 if (isOnline && isChatWindowOpen) {
                     io.to(reciverId).emit("reciveAMsg", createMsg);
@@ -189,14 +194,12 @@ io.on("connection", async (socket) => {
     });
 });
 
-mongoose
-    .connect(mongoUrl)
-    .then(() => {
-        console.log("connnected mongo✅");
-        server.listen(port, () => {
-            console.log("server connected");
-        });
+mongoose.connect(mongoUrl).then(() => {
+
+    console.log('connect to DB✅')
+    server.listen(port, () => {
+        console.log(`server running at port:${port}`)
     })
-    .catch((err) => {
-        console.log(`something went wrong: ${err.message}`);
-    });
+}).catch((error) => {
+    console.log('something went error in mongoose: ', error)
+})

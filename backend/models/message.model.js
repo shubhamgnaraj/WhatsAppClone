@@ -30,6 +30,10 @@ const messageSchema = new mongoose.Schema({
         enum: ['pending', 'sent', 'delivered', 'read'],
         default: 'sent'
     },
+    parrentMsgId: {
+        type: String,
+        default: null
+    },
     readAt: {
         type: Date,
         default: null
@@ -40,8 +44,8 @@ const messageSchema = new mongoose.Schema({
     }
 });
 
-messageSchema.index({ reciverId: 1, chatType: 1});
-messageSchema.index({senderId: 1, reciverId: 1});
+messageSchema.index({ reciverId: 1, chatType: 1 });
+messageSchema.index({ senderId: 1, reciverId: 1 });
 
 const Message = mongoose.model("Message", messageSchema);
 

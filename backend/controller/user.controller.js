@@ -1,13 +1,11 @@
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
 import mongoose from "mongoose";
-import cloudinary from "../service/cloudinary.service.js";
 import UserAndGroupAdmin from "../models/user&group_admin.model.js";
 
 export const addUserAdminList = async (req, res) => {
     const { userName, email } = req.body;
 
-    console.log('userData: ', req.body)
     const adminId = req.user._id;
 
     try {
@@ -177,8 +175,7 @@ export const getUsersAndGroupsAdminList = async (req, res) => {
             .status(200)
             .json({ message: "you are not create any group or not add any users!" });
     }
-
-    console.log(finalResult);
+    
     res.status(200).json({ message: "result", finalResult });
 };
 
@@ -187,61 +184,60 @@ export const getTheMessgesSAndR = async (req, res) => {
         const admin = req.user;
         const { receiverId, chatType } = req.query;
 
-        if (!admin._id || !receiverId) {
+        if (!admin?._id || !receiverId) {
             return res.status(400).json({ message: "Id's missing" });
         }
 
         const mongoAId = new mongoose.Types.ObjectId(admin._id);
         const mongoUId = new mongoose.Types.ObjectId(receiverId);
-        let chatHistory;
 
-        if (chatType === "Group") {
-            chatHistory = await Message.aggregate([
-                { $match: { reciverId: mongoUId, chatType: "Group" } },
-                { $sort: { createdAt: 1 } },
-                {
-                    $lookup: {
-                        from: "users",
-                        localField: "senderId",
-                        foreignField: "_id",
-                        as: "senderDetails",
-                    },
-                },
-                {
-                    $addFields: {
-                        senderDetails: { $arrayElemAt: ["$senderDetails", 0] },
-                    },
-                },
-                {
-                    $project: {
-                        _id: 1,
-                        senderId: 1,
-                        reciverId: 1,
-                        messageType: 1,
-                        chatType: 1,
-                        content: 1,
-                        createdAt: 1,
-                        senderName: "$senderDetails.userName",
-                        email: "$senderDetails.email",
-                        lastSeen: "$senderDetails.lastSeen",
-                    },
-                },
-            ]);
-        } else {
-            chatHistory = await Message.find({
-                chatType: "User",
-                $or: [
-                    { senderId: mongoAId, reciverId: mongoUId },
-                    { senderId: mongoUId, reciverId: mongoAId },
-                ],
-            }).sort({ createdAt: 1 });
-        }
+        const matchCondition =
+            chatType === "Group"
+                ? { reciverId: mongoUId, chatType: "Group" }
+                : {
+                    chatType: "User",
+                    $or: [
+                        { senderId: mongoAId, reciverId: mongoUId },
+                        { senderId: mongoUId, reciverId: mongoAId },
+                    ],
+                };
 
-        res
-            .status(200)
-            .json({ message: "successfully fetched chatHistory", chatHistory });
+        const chatHistory = await Message.aggregate([
+            { $match: matchCondition },
+            { $sort: { createdAt: 1 } },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "senderId",
+                    foreignField: "_id",
+                    as: "senderDetails",
+                },
+            },
+            {
+                $addFields: {
+                    senderDetails: { $arrayElemAt: ["$senderDetails", 0] },
+                },
+            },
+            {
+                $project: {
+                    _id: 1,
+                    senderId: 1,
+                    reciverId: 1,
+                    messageType: 1,
+                    chatType: 1,
+                    content: 1,
+                    status: 1,
+                    createdAt: 1,
+                    userName: "$senderDetails.userName",
+                    email: "$senderDetails.email",
+                    lastSeen: "$senderDetails.lastSeen",
+                },
+            },
+        ]);
+
+        res.status(200).json({ message: "successfully fetched chatHistory", chatHistory });
     } catch (error) {
-        res.status(400).json({ message: "Admin not get messages: ", error });
+        res.status(400).json({ message: "Admin not get messages", error: error.message });
     }
 };
 
